@@ -4,6 +4,9 @@ import requests
 import json
 import time
 import logging
+from utils.utils import (
+    prepare_page_for_scrapping
+)
 
 
 # Set-up a logger
@@ -61,16 +64,25 @@ class TextScrapper:
             raise RuntimeError
         
         return l
+    
+    def scrape_podcast_text(self, list_of_urls: list[dict]) -> list[dict]:
+        """
+        Receive collected podcast urls and scrape actual text from there
+        """
+        for i, this_record in enumerate(list_of_urls):
+            print(i, this_record)
 
+        return [{'0':'0'}]  # just for example, for testing purposes
 
 
     def collect_podcast_urls_from_website(self):
         """
-        Collect internal URLs addresses which stores podcast text inside
+        Collect internal URLs addresses which stores podcast text inside (main function of the class)
         """
-        
         response: list = self.get_response()
         podcast_urls: list[dict] = self.scrape_podcasts_urls(response=response)
+        podcast_text: list[dict] = self.scrape_podcast_text(list_of_urls=podcast_urls)
+
 
 def main():
     """Run scrapper pipeline"""
