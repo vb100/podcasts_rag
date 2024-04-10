@@ -4,14 +4,21 @@ import requests
 import json
 import time
 import logging
+from playwright.sync_api import sync_playwright
+from bs4 import BeautifulSoup
 from utils.utils import (
-    prepare_page_for_scrapping
+    prepare_page_for_scrapping,
+    block_aggressively,
+    save_to_json
 )
 
 
-# Set-up a logger
-logging.Formatter.converter = time.gmtime
-logger = logging.getLogger(__name__)
+# Initialize logger
+logging.basicConfig(
+    filename="podcasts_scrapper_pipeline.txt", encoding="utf-8", level=logging.INFO
+)
+template_name = "Scrapping pipeline"
+logger = logging.getLogger(template_name)
 
 
 # System constants
@@ -48,12 +55,10 @@ class TextScrapper:
             l: list = []
             for i, this_link in enumerate(response):
                 full_link: str = '/'.join([MAIN_URL, this_link['newUrl']])
-                podcast_number: str = this_link['oldUrl'].split('/')[-1]
                 if '/podcast/' in full_link:
-                    print(i, this_link)
+                    logger.info(i, this_link)
                     d: dict = {
                         'url': full_link,
-                        'number': podcast_number
                     }
                     l.append(dict(d))
             
@@ -69,11 +74,52 @@ class TextScrapper:
         """
         Receive collected podcast urls and scrape actual text from there
         """
-        for i, this_record in enumerate(list_of_urls):
-            print(i, this_record)
+        list_of_urls_ = list_of_urls
 
-        return [{'0':'0'}]  # just for example, for testing purposes
+        with sync_playwright() as playwright:
+            #for i, this_record in enumerate(list_of_urls):
+            for i, this_record in enumerate(list_of_urls[:10]):
+                logger.info(i+1, this_record)
 
+                browser = playwright.chromium.launch(headless=True, slow_mo=1500)
+                # <---- browsing logic: start
+                self.page = browser.new_page()
+                self.page.route("**/*", block_aggressively)
+                self.page.goto(this_record['url'], wait_until="networkidle", timeout=10_000)
+                page_title_: str = self.page.title().split('|')[0].split(' - ')[0].strip()
+                podcast_number: str = page_title_.split(': ')[0]
+                page_title: str = page_title_.split(f'{podcast_number}: ')[-1]
+                html_text = self.page.inner_html('.transcript-container')
+                # browsing logic: end ---->
+                browser.close()
+                
+                html_text_for_scrapping: BeautifulSoup = BeautifulSoup(html_text, 'html.parser')
+                l_text: list = []
+                for this_paragraph in html_text_for_scrapping.find_all('p'):  # Sometimes <p> is not exists
+                    actual_text: str = this_paragraph.text.strip().replace('\t', ' ').replace('\n', '')
+                    # TODO: the cleaning logic below can be re-formated into stand-alone function
+                    if '(background music plays)' in actual_text:
+                        actual_text: str = actual_text.replace('(background music plays)', '')
+                    if (len(actual_text) > 0) and (actual_text.upper() != 'Show all'.upper()):
+                        l_text.append(actual_text)
+
+                full_text: str = '\n'.join(l_text)
+
+                # Assignation to the original data-store
+                list_of_urls_[i]['full_text'] = full_text
+                list_of_urls_[i]['title'] = page_title
+                list_of_urls_[i]['number'] = podcast_number
+
+
+        return list_of_urls_
+    
+    def save_data_to_json(self, data: list[dict]) -> None:
+        """
+        Save scrapped data to external JSON file
+        """
+        save_to_json(data=data)
+
+        return None
 
     def collect_podcast_urls_from_website(self):
         """
@@ -82,6 +128,8 @@ class TextScrapper:
         response: list = self.get_response()
         podcast_urls: list[dict] = self.scrape_podcasts_urls(response=response)
         podcast_text: list[dict] = self.scrape_podcast_text(list_of_urls=podcast_urls)
+        logger.info('Texts are colllected!')
+        self.save_data_to_json(data=podcast_text)
 
 
 def main():
