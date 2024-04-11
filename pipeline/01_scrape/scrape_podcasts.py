@@ -6,10 +6,15 @@ import time
 import logging
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
+
+# Import and use required excplicit functions and methods
 from utils.utils import (
     prepare_page_for_scrapping,
     block_aggressively,
     save_to_json
+)
+from utils.preprocess_text import (
+    preprocess_sentence
 )
 
 
@@ -56,7 +61,7 @@ class TextScrapper:
             for i, this_link in enumerate(response):
                 full_link: str = '/'.join([MAIN_URL, this_link['newUrl']])
                 if '/podcast/' in full_link:
-                    logger.info(i, this_link)
+                    logger.info(f'Collecting URL: {i+1}: {this_link})
                     d: dict = {
                         'url': full_link,
                     }
@@ -70,6 +75,49 @@ class TextScrapper:
         
         return l
     
+    def clean_paragprah_text(self, paragraph_text: str) -> str:
+        """
+        Clean paragprah text by removing phrases and words which do not make any sense to the LLM
+        """
+
+        paragraph_text: str = paragraph_text.strip()
+        phrases_to_remove: dict = {
+            '\t': ' ',
+            '\n': ' ',
+            '--':'-',
+            "I'll ": 'I will ',
+            "you're ": "you are ",
+            "we’ll ": "we will ",
+            "You'll ": "You will "
+            "I'm ": "I am ",
+            "it’s ": "it is ",
+            'that’s ': 'that is ',
+            "That's ": "That is ",
+            "there’s ": "there is ",
+            'Podcast Transcript': '',
+            '(background music plays)': ''
+        }
+
+        for this_key in phrases_to_remove.keys():
+            paragraph_text: str = paragraph_text.replace(this_key, phrases_to_remove.get(this_key))
+
+        paragraph_text: str = preprocess_sentence(sentence=paragraph_text.replace('  ', ' '))
+
+        return paragraph_text
+    
+    def handle_parapgraphs(self, all_text_sections: BeautifulSoup, tag: str) -> list:
+        """
+        Iterate through text paragrapsh whether they are based on <div> or <p> tags in the HTML code
+        """
+        l_text: list = []
+        for this_paragraph in all_text_sections.find_all(tag):
+            actual_text: str = self.clean_paragprah_text(paragraph_text=this_paragraph.text)
+            if (len(actual_text) > 0) and (actual_text.upper() != 'Show all'.upper()):
+                l_text.append(actual_text)
+
+        return l_text
+
+    
     def scrape_podcast_text(self, list_of_urls: list[dict]) -> list[dict]:
         """
         Receive collected podcast urls and scrape actual text from there
@@ -79,7 +127,7 @@ class TextScrapper:
         with sync_playwright() as playwright:
             #for i, this_record in enumerate(list_of_urls):
             for i, this_record in enumerate(list_of_urls[:10]):
-                logger.info(i+1, this_record)
+                logger.info(i+1, this_record['url'])
 
                 browser = playwright.chromium.launch(headless=True, slow_mo=1500)
                 # <---- browsing logic: start
@@ -95,21 +143,17 @@ class TextScrapper:
                 
                 html_text_for_scrapping: BeautifulSoup = BeautifulSoup(html_text, 'html.parser')
                 l_text: list = []
-                for this_paragraph in html_text_for_scrapping.find_all('p'):  # Sometimes <p> is not exists
-                    actual_text: str = this_paragraph.text.strip().replace('\t', ' ').replace('\n', '')
-                    # TODO: the cleaning logic below can be re-formated into stand-alone function
-                    if '(background music plays)' in actual_text:
-                        actual_text: str = actual_text.replace('(background music plays)', '')
-                    if (len(actual_text) > 0) and (actual_text.upper() != 'Show all'.upper()):
-                        l_text.append(actual_text)
+                if len(html_text_for_scrapping.find_all('p')) > 1:
+                    l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='p')
 
-                full_text: str = '\n'.join(l_text)
+                elif len(html_text_for_scrapping.find_all('div')) > 0:
+                    l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
+                full_text: str = ' '.join(list(set(l_text)))
 
                 # Assignation to the original data-store
                 list_of_urls_[i]['full_text'] = full_text
                 list_of_urls_[i]['title'] = page_title
                 list_of_urls_[i]['number'] = podcast_number
-
 
         return list_of_urls_
     
