@@ -94,6 +94,7 @@ class TextScrapper:
             'that’s ': 'that is ',
             "That's ": "That is ",
             "there’s ": "there is ",
+            "doesn’t ": "does not",
             'Podcast Transcript': '',
             '(background music plays)': ''
         }
@@ -127,7 +128,7 @@ class TextScrapper:
         with sync_playwright() as playwright:
             #for i, this_record in enumerate(list_of_urls):
             for i, this_record in enumerate(list_of_urls[:10]):
-                logger.info(i+1, this_record['url'])
+                logger.info(f'{i+1}, {this_record["url"]}')
 
                 browser = playwright.chromium.launch(headless=True, slow_mo=1500)
                 # <---- browsing logic: start

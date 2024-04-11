@@ -6,7 +6,7 @@ import re
 
 def preprocess_sentence(sentence: str) -> str:
     """
-    Pre-process scrapped and split sentence to be readable and usable for chunking.
+    Pre-process scrapped and split sentence to be readable and usable for NER.
     """
     # Handle cases: "e.9"
     d: dict = {}
@@ -74,7 +74,20 @@ def preprocess_sentence(sentence: str) -> str:
             
     for key, value in d.items():
         sentence: str = sentence.replace(key, value)
-    
+            
+    # Handle case: needed."Kirill:
+    d: dict = {}
+        
+    for this_token in sentence.split(' '):
+        if re.search(r'[a-zA-Z]+[.][\"][a-zA-Z]+', this_token):
+            temp_seq: str = re.search(r'[a-zA-Z]+[.][\"][a-zA-Z]+', this_token).group()
+            word_1, word_2 = temp_seq.split('.')
+            fixed_seq: str = f'{word_1}. {word_2}'
+            d[temp_seq] = fixed_seq
+            
+    for key, value in d.items():
+        sentence: str = sentence.replace(key, value)
+            
     # Handle case: 2019.3
     d: dict = {}
 
