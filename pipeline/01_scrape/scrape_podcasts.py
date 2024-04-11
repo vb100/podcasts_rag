@@ -61,7 +61,7 @@ class TextScrapper:
             for i, this_link in enumerate(response):
                 full_link: str = '/'.join([MAIN_URL, this_link['newUrl']])
                 if '/podcast/' in full_link:
-                    logger.info(f'Collecting URL: {i+1}: {this_link})
+                    logger.info(f'Collecting URL: {i+1}: {this_link}')
                     d: dict = {
                         'url': full_link,
                     }
@@ -88,7 +88,7 @@ class TextScrapper:
             "I'll ": 'I will ',
             "you're ": "you are ",
             "we’ll ": "we will ",
-            "You'll ": "You will "
+            "You'll ": "You will ",
             "I'm ": "I am ",
             "it’s ": "it is ",
             'that’s ': 'that is ',
