@@ -11,7 +11,8 @@ from bs4 import BeautifulSoup
 from utils.utils import (
     prepare_page_for_scrapping,
     block_aggressively,
-    save_to_json
+    save_to_json,
+    error_msg_load_page
 )
 from utils.preprocess_text import (
     preprocess_sentence
@@ -27,7 +28,8 @@ logger = logging.getLogger(template_name)
 
 
 # System constants
-API_URL: str = 'https://www.superdatascience.com/cc7f0e6a068fb7f727e59b28d5cdca71d73aa0c3.js'
+MAX_RETRIES: int = 30  # maximum number of retries to load the review section
+API_URL: str = 'https://www.superdatascience.com/fc1c3a35f8202c72aa2adac93ce2a764927351ad.js'  # Can be changed by API provider
 MAIN_URL: str = 'https://www.superdatascience.com'
 payload: dict = {
     'meteor_js_resource': 'true'
@@ -61,7 +63,7 @@ class TextScrapper:
             for i, this_link in enumerate(response):
                 full_link: str = '/'.join([MAIN_URL, this_link['newUrl']])
                 if '/podcast/' in full_link:
-                    logger.info(f'Collecting URL: {i+1}: {this_link}')
+                    logger.info(f'Collecting URL: {i+1}: {this_link["newUrl"]}')
                     d: dict = {
                         'url': full_link,
                     }
@@ -90,11 +92,11 @@ class TextScrapper:
             "we’ll ": "we will ",
             "You'll ": "You will ",
             "I'm ": "I am ",
-            "it’s ": "it is ",
-            'that’s ': 'that is ',
+            "it's ": "it is ",
+            "that's ": 'that is ',
             "That's ": "That is ",
-            "there’s ": "there is ",
-            "doesn’t ": "does not",
+            "there's ": "there is ",
+            "doesn't ": "does not",
             'Podcast Transcript': '',
             '(background music plays)': ''
         }
@@ -117,6 +119,39 @@ class TextScrapper:
                 l_text.append(actual_text)
 
         return l_text
+    
+    def retry_on_load_page(self, url: str) -> bool:
+        """
+        Repeat load the page by given URL MAX_RETRIES times or till a page with full DOM is fully loaded using
+        Playwright.
+        """
+        loaded: bool = True
+        for _ in range(MAX_RETRIES):
+            logger.info(f'::: attempt to load review section: {_ + 1} : {url}')
+            try:
+                loaded: bool = True
+                self.page.goto(
+                    f'{url}', wait_until="networkidle", timeout=5_000
+                )
+                self.page.set_default_timeout(30_000)  # 30 seconds
+                break
+            except:
+                loaded: bool = False
+                pass
+
+        return loaded
+    
+    def load_dynamic_page(self, page_url: str) -> bool:
+        """
+        Load a dynamic page with Playwright and return error if fail
+        """
+        loaded: bool = self.retry_on_load_page(url=page_url)
+        success: bool = True
+        if not loaded:
+            error_msg_load_page(url=page_url, max_retries=MAX_RETRIES)
+            success: bool = not success
+
+        return success
 
     
     def scrape_podcast_text(self, list_of_urls: list[dict]) -> list[dict]:
@@ -126,15 +161,16 @@ class TextScrapper:
         list_of_urls_ = list_of_urls
 
         with sync_playwright() as playwright:
-            #for i, this_record in enumerate(list_of_urls):
-            for i, this_record in enumerate(list_of_urls[:10]):
+            for i, this_record in enumerate(list_of_urls):
+            #for i, this_record in enumerate(list_of_urls[:10]):
                 logger.info(f'{i+1}, {this_record["url"]}')
 
                 browser = playwright.chromium.launch(headless=True, slow_mo=1500)
                 # <---- browsing logic: start
                 self.page = browser.new_page()
                 self.page.route("**/*", block_aggressively)
-                self.page.goto(this_record['url'], wait_until="networkidle", timeout=10_000)
+                #self.page.goto(this_record['url'], wait_until="networkidle", timeout=60_000)
+                self.load_dynamic_page(page_url=this_record['url'])
                 page_title_: str = self.page.title().split('|')[0].split(' - ')[0].strip()
                 podcast_number: str = page_title_.split(': ')[0]
                 page_title: str = page_title_.split(f'{podcast_number}: ')[-1]

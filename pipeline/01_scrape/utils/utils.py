@@ -45,3 +45,11 @@ def save_to_json(data: list) -> None:
     with open(os.path.join(os.getcwd(), data_folder, filename), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
     logger.info('JSON output is saved successfully.')
+
+def error_msg_load_page(url: str, max_retries: str) -> None:
+    """
+    Error message in case of failed load review section
+    """
+    logger.error(f'The reviews section was not loaded in {max_retries} times!')
+    logger.error(f'| Page URL: {url}')
+    logger.error('-'*20)
