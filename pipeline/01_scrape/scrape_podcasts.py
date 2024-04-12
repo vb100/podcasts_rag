@@ -4,6 +4,7 @@ import requests
 import json
 import time
 import logging
+import re
 from playwright.sync_api import sync_playwright
 from bs4 import BeautifulSoup
 
@@ -15,7 +16,8 @@ from utils.utils import (
     error_msg_load_page
 )
 from utils.preprocess_text import (
-    preprocess_sentence
+    preprocess_sentence,
+    clean_paragprah_text
 )
 
 
@@ -77,44 +79,13 @@ class TextScrapper:
         
         return l
     
-    def clean_paragprah_text(self, paragraph_text: str) -> str:
-        """
-        Clean paragprah text by removing phrases and words which do not make any sense to the LLM
-        """
-
-        paragraph_text: str = paragraph_text.strip()
-        phrases_to_remove: dict = {
-            '\t': ' ',
-            '\n': ' ',
-            '--':'-',
-            "I'll ": 'I will ',
-            "you're ": "you are ",
-            "we’ll ": "we will ",
-            "You'll ": "You will ",
-            "I'm ": "I am ",
-            "it's ": "it is ",
-            "that's ": 'that is ',
-            "That's ": "That is ",
-            "there's ": "there is ",
-            "doesn't ": "does not",
-            'Podcast Transcript': '',
-            '(background music plays)': ''
-        }
-
-        for this_key in phrases_to_remove.keys():
-            paragraph_text: str = paragraph_text.replace(this_key, phrases_to_remove.get(this_key))
-
-        paragraph_text: str = preprocess_sentence(sentence=paragraph_text.replace('  ', ' '))
-
-        return paragraph_text
-    
     def handle_parapgraphs(self, all_text_sections: BeautifulSoup, tag: str) -> list:
         """
         Iterate through text paragrapsh whether they are based on <div> or <p> tags in the HTML code
         """
         l_text: list = []
         for this_paragraph in all_text_sections.find_all(tag):
-            actual_text: str = self.clean_paragprah_text(paragraph_text=this_paragraph.text)
+            actual_text: str = clean_paragprah_text(paragraph_text=this_paragraph.text)
             if (len(actual_text) > 0) and (actual_text.upper() != 'Show all'.upper()):
                 l_text.append(actual_text)
 
@@ -131,9 +102,9 @@ class TextScrapper:
             try:
                 loaded: bool = True
                 self.page.goto(
-                    f'{url}', wait_until="networkidle", timeout=5_000
+                    f'{url}', wait_until="networkidle", timeout=25_000
                 )
-                self.page.set_default_timeout(30_000)  # 30 seconds
+                self.page.set_default_timeout(60_000)  # 120 seconds
                 break
             except:
                 loaded: bool = False
@@ -152,6 +123,30 @@ class TextScrapper:
             success: bool = not success
 
         return success
+    
+    def save_data_to_json(self, data: dict, filename: str) -> None:
+        """
+        Save scrapped data to external JSON file
+        """
+        save_to_json(data=data, filename=filename)
+
+        return None
+    
+    def generate_filename(self, title: str, number: str) -> str:
+        """
+        Clean a given raw filename string and return generated version of that
+        """
+        filename: str = f'{number.replace(" ", "_").lower()}_{title.lower().split(":")[-1].replace(" ", "_")}.json'
+        filename: str = filename.replace('/', '_')
+        filename: str = filename.replace('__', '_')
+        filename: str = filename.replace(',', '')
+        filename: str = filename.replace('”', '')
+        filename: str = filename.replace('%', '')
+        filename: str = filename.replace('!', '')
+        filename: str = filename.replace('"', '')
+        filename: str = filename.replace('?', '')
+
+        return filename
 
     
     def scrape_podcast_text(self, list_of_urls: list[dict]) -> list[dict]:
@@ -169,38 +164,40 @@ class TextScrapper:
                 # <---- browsing logic: start
                 self.page = browser.new_page()
                 self.page.route("**/*", block_aggressively)
-                #self.page.goto(this_record['url'], wait_until="networkidle", timeout=60_000)
                 self.load_dynamic_page(page_url=this_record['url'])
-                page_title_: str = self.page.title().split('|')[0].split(' - ')[0].strip()
-                podcast_number: str = page_title_.split(': ')[0]
+                page_title_: str = this_record['url'].split('sds-')[-1][4:]
+                podcast_number: str = re.search(r'[\w]{3}-[\d+]*', this_record['url']).group()
                 page_title: str = page_title_.split(f'{podcast_number}: ')[-1]
                 html_text = self.page.inner_html('.transcript-container')
                 # browsing logic: end ---->
                 browser.close()
-                
-                html_text_for_scrapping: BeautifulSoup = BeautifulSoup(html_text, 'html.parser')
-                l_text: list = []
-                if len(html_text_for_scrapping.find_all('p')) > 1:
-                    l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='p')
 
-                elif len(html_text_for_scrapping.find_all('div')) > 0:
-                    l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
-                full_text: str = ' '.join(list(set(l_text)))
+                if 'sds-' in podcast_number:
+                    html_text_for_scrapping: BeautifulSoup = BeautifulSoup(html_text, 'html.parser')
+                    l_text: list = []
+                    if len(html_text_for_scrapping.find_all('p')) > 1:
+                        l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='p')
 
-                # Assignation to the original data-store
-                list_of_urls_[i]['full_text'] = full_text
-                list_of_urls_[i]['title'] = page_title
-                list_of_urls_[i]['number'] = podcast_number
+                    elif len(html_text_for_scrapping.find_all('div')) > 0:
+                        l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
+                    full_text: str = ' '.join(list(set(l_text)))
+
+                    # Assignation to the original data-store
+                    list_of_urls_[i]['full_text'] = clean_paragprah_text(full_text)
+                    list_of_urls_[i]['title'] = page_title
+                    list_of_urls_[i]['number'] = podcast_number
+
+                    # Generate filename and save the actual record (article text with metadata)
+                    filename: str = self.generate_filename(
+                        title=list_of_urls_[i]["title"],
+                        number=list_of_urls_[i]["number"]
+                        )
+                    self.save_data_to_json(
+                        data=list_of_urls_[i],
+                        filename=filename
+                        )
 
         return list_of_urls_
-    
-    def save_data_to_json(self, data: list[dict]) -> None:
-        """
-        Save scrapped data to external JSON file
-        """
-        save_to_json(data=data)
-
-        return None
 
     def collect_podcast_urls_from_website(self):
         """
@@ -210,7 +207,6 @@ class TextScrapper:
         podcast_urls: list[dict] = self.scrape_podcasts_urls(response=response)
         podcast_text: list[dict] = self.scrape_podcast_text(list_of_urls=podcast_urls)
         logger.info('Texts are colllected!')
-        self.save_data_to_json(data=podcast_text)
 
 
 def main():

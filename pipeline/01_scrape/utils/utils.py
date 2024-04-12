@@ -36,15 +36,16 @@ def block_aggressively(route, request, excluded_resource_types=["image", "images
     else:
         route.continue_()
 
-def save_to_json(data: list) -> None:
+
+def save_to_json(data: dict, filename: str) -> None:
     """
     Save a given list with data to JSON file
     """
-    filename: str = 'collections.json'
     data_folder: str = 'output'
     with open(os.path.join(os.getcwd(), data_folder, filename), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=4)
     logger.info('JSON output is saved successfully.')
+
 
 def error_msg_load_page(url: str, max_retries: str) -> None:
     """
