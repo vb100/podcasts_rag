@@ -15,7 +15,6 @@ logging.Formatter.converter = time.gmtime
 logger = logging.getLogger(__name__)
 
 
-
 def prepare_page_for_scrapping(page_url: str) -> BeautifulSoup:
     """
     Build a BeautifulSoup object which will be suitable for scrapping data by a given webpage url address

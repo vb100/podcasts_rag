@@ -157,7 +157,7 @@ class TextScrapper:
 
         with sync_playwright() as playwright:
             for i, this_record in enumerate(list_of_urls):
-            #for i, this_record in enumerate(list_of_urls[:10]):
+            #for i, this_record in enumerate(list_of_urls[109:]):
                 logger.info(f'{i+1}, {this_record["url"]}')
 
                 browser = playwright.chromium.launch(headless=True, slow_mo=1500)
@@ -165,37 +165,42 @@ class TextScrapper:
                 self.page = browser.new_page()
                 self.page.route("**/*", block_aggressively)
                 self.load_dynamic_page(page_url=this_record['url'])
-                page_title_: str = this_record['url'].split('sds-')[-1][4:]
-                podcast_number: str = re.search(r'[\w]{3}-[\d+]*', this_record['url']).group()
+
+                if 'sds-' in this_record['url']:
+                    page_title_: str = this_record['url'].split('sds-')[-1][4:]
+                    podcast_number: str = re.search(r'[\w]{3}-[\d+]*', this_record['url']).group()
+                elif 'podcast-' in this_record['url']:
+                    page_title_: str = this_record['url'].split('podcast-')[-1]
+                    podcast_number: str = f'cus-{str(i+1).zfill(2)}'
+                
                 page_title: str = page_title_.split(f'{podcast_number}: ')[-1]
                 html_text = self.page.inner_html('.transcript-container')
                 # browsing logic: end ---->
                 browser.close()
 
-                if 'sds-' in podcast_number:
-                    html_text_for_scrapping: BeautifulSoup = BeautifulSoup(html_text, 'html.parser')
-                    l_text: list = []
-                    if len(html_text_for_scrapping.find_all('p')) > 1:
-                        l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='p')
+                html_text_for_scrapping: BeautifulSoup = BeautifulSoup(html_text, 'html.parser')
+                l_text: list = []
+                if len(html_text_for_scrapping.find_all('p')) > 1:
+                    l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='p')
 
-                    elif len(html_text_for_scrapping.find_all('div')) > 0:
-                        l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
-                    full_text: str = ' '.join(list(set(l_text)))
+                elif len(html_text_for_scrapping.find_all('div')) > 0:
+                    l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
+                full_text: str = ' '.join(list(set(l_text)))
 
-                    # Assignation to the original data-store
-                    list_of_urls_[i]['full_text'] = clean_paragprah_text(full_text)
-                    list_of_urls_[i]['title'] = page_title
-                    list_of_urls_[i]['number'] = podcast_number
+                # Assignation to the original data-store
+                list_of_urls_[i]['full_text'] = clean_paragprah_text(full_text)
+                list_of_urls_[i]['title'] = page_title
+                list_of_urls_[i]['number'] = podcast_number
 
-                    # Generate filename and save the actual record (article text with metadata)
-                    filename: str = self.generate_filename(
-                        title=list_of_urls_[i]["title"],
-                        number=list_of_urls_[i]["number"]
-                        )
-                    self.save_data_to_json(
-                        data=list_of_urls_[i],
-                        filename=filename
-                        )
+                # Generate filename and save the actual record (article text with metadata)
+                filename: str = self.generate_filename(
+                    title=list_of_urls_[i]["title"],
+                    number=list_of_urls_[i]["number"]
+                    )
+                self.save_data_to_json(
+                    data=list_of_urls_[i],
+                    filename=filename
+                    )
 
         return list_of_urls_
 
