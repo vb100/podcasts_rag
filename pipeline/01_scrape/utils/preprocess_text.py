@@ -119,8 +119,14 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "they’re": "they are",
         "They’re": "They are",
         "we'll ": "we will ",
+        "We'll": "We will",
+        "we'll": "we will",
         "don't": "do not",
         "Don't": "Do not",
+        "we've": "we have",
+        "We've": "We have",
+        "they’d": "they would",
+        "They’d": "They would",
         " ...": ".",
         "(Laughs)": "",
         "there’ll": "there will",
@@ -145,6 +151,7 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "what's": "what is",
         "We’re": "We are",
         "don’t": "do not",
+        "Don’t": "Do not",
         "you’d": "you would",
         "didn’t": "did not",
         "Can’t": "Can not",
@@ -195,6 +202,8 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "they'll": "they will",
         "there‘s": "there is",
         "That's ": "That is ",
+        "he's": "he is",
+        "He's": "He is",
         "there's ": "there is ",
         "they're": "they are",
         "They're": "They are",
@@ -203,6 +212,8 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "doesn't ": "does not",
         "you’re": "you are",
         "You’re": "You are",
+        "there's": "there is",
+        "There's": "There is",
         "--": "-",
         'Podcast Transcript': '',
         '(background music plays)': '',
@@ -218,3 +229,15 @@ def clean_paragprah_text(paragraph_text: str) -> str:
     paragraph_text: str = " ".join(paragraph_text.split())
 
     return paragraph_text
+
+def remove_timestamps(podcast_text: str) -> str:
+    """
+    Remove found timestamps [HH:MM:SS] from the given podcast text and return
+    cleaned version
+    """
+    timestamps = re.findall(r'[[]\d[:]\d+[:]\d+[]]', podcast_text)
+    if len(timestamps) > 0:
+        for this_timestamp in timestamps:
+            podcast_text: str = podcast_text.replace(this_timestamp, '')
+
+    return podcast_text

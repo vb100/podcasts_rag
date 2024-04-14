@@ -53,3 +53,28 @@ def error_msg_load_page(url: str, max_retries: str) -> None:
     logger.error(f'The reviews section was not loaded in {max_retries} times!')
     logger.error(f'| Page URL: {url}')
     logger.error('-'*20)
+
+
+def generate_scrapped_podcast_filename(title: str, number: str) -> str:
+    """
+    Clean a given raw filename string and return generated version of that
+    """
+    filename: str = f'{number.replace(" ", "_").lower()}_{title.lower().split(":")[-1].replace(" ", "_")}.json'
+
+    rules_to_clean: dict = {
+        " ": "_",
+        '/': '_',
+        ',': '',
+        '”': '',
+        '%': '',
+        '!': '',
+        '"': '',
+        '?': '',
+        '__': '_',
+        'www.': '',
+    }
+
+    for this_key in rules_to_clean.keys():
+        filename: str = filename.replace(this_key, rules_to_clean.get(this_key))
+
+    return filename

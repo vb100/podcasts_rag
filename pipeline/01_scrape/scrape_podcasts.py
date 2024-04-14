@@ -13,11 +13,13 @@ from utils.utils import (
     prepare_page_for_scrapping,
     block_aggressively,
     save_to_json,
-    error_msg_load_page
+    error_msg_load_page,
+    generate_scrapped_podcast_filename,
 )
 from utils.preprocess_text import (
     preprocess_sentence,
-    clean_paragprah_text
+    clean_paragprah_text,
+    remove_timestamps
 )
 
 
@@ -132,24 +134,6 @@ class TextScrapper:
 
         return None
     
-    def generate_filename(self, title: str, number: str) -> str:
-        """
-        Clean a given raw filename string and return generated version of that
-        """
-        filename: str = f'{number.replace(" ", "_").lower()}_{title.lower().split(":")[-1].replace(" ", "_")}.json'
-        filename: str = filename.replace('/', '_')
-        filename: str = filename.replace(',', '')
-        filename: str = filename.replace('”', '')
-        filename: str = filename.replace('%', '')
-        filename: str = filename.replace('!', '')
-        filename: str = filename.replace('"', '')
-        filename: str = filename.replace('?', '')
-        filename: str = filename.replace('__', '_')
-        filename: str = filename.replace('www.', '')
-
-        return filename
-
-    
     def scrape_podcast_text(self, list_of_urls: list[dict]) -> list[dict]:
         """
         Receive collected podcast urls and scrape actual text from there
@@ -171,12 +155,14 @@ class TextScrapper:
                 if 'sds-' in this_record['url']:
                     page_title_: str = this_record['url'].split('sds-')[-1][4:]
                     podcast_number: str = re.search(r'[\w]{3}-[\d+]*', this_record['url']).group()
+                    static_part, dynamic_part = podcast_number.split('-')
+                    podcast_number: str = f'{static_part}-{str(int(dynamic_part)).zfill(4)}'
                 elif 'podcast-' in this_record['url']:
                     page_title_: str = this_record['url'].split('podcast-')[-1]
-                    podcast_number: str = f'cus-{str(i+1).zfill(2)}'
+                    podcast_number: str = f'cus-{str(i+1).zfill(4)}'
                 elif '/podcast/' in this_record['url']:
                     page_title_: str = this_record['url'].split('/')[-1].strip()
-                    podcast_number: str = f'cus-{str(i+1).zfill(2)}'
+                    podcast_number: str = f'cus-{str(i+1).zfill(4)}'
                 
                 page_title: str = page_title_.split(f'{podcast_number}: ')[-1]
                 html_text = self.page.inner_html('.transcript-container')
@@ -193,12 +179,14 @@ class TextScrapper:
                 full_text: str = ' '.join(list(set(l_text)))
 
                 # Assignation to the original data-store
-                list_of_urls_[i]['full_text'] = clean_paragprah_text(full_text)
+                list_of_urls_[i]['full_text'] = remove_timestamps(
+                    podcast_text=clean_paragprah_text(full_text)
+                    )
                 list_of_urls_[i]['title'] = page_title
                 list_of_urls_[i]['number'] = podcast_number
 
                 # Generate filename and save the actual record (article text with metadata)
-                filename: str = self.generate_filename(
+                filename: str = generate_scrapped_podcast_filename(
                     title=list_of_urls_[i]["title"],
                     number=list_of_urls_[i]["number"]
                     )
