@@ -134,6 +134,15 @@ class TextScrapper:
 
         return None
     
+    def _full_podcast_text_cleaning_heuristic(podcast_text: str) -> str:
+        """
+        Steps to implement overall full podcast text cleaning and preparation
+        """
+        podcast_text: str = remove_timestamps(podcast_text=podcast_text)
+        podcast_text: str = clean_paragprah_text(paragraph_text=podcast_text)
+
+        return podcast_text
+    
     def scrape_podcast_text(self, list_of_urls: list[dict]) -> list[dict]:
         """
         Receive collected podcast urls and scrape actual text from there
@@ -177,11 +186,8 @@ class TextScrapper:
                 elif len(html_text_for_scrapping.find_all('div')) > 0:
                     l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
                 full_text: str = ' '.join(list(set(l_text)))
-
-                # Assignation to the original data-store
-                list_of_urls_[i]['full_text'] = remove_timestamps(
-                    podcast_text=clean_paragprah_text(full_text)
-                    )
+                
+                list_of_urls_[i]['full_text'] = self._full_podcast_text_cleaning_heuristic(podcast_text=full_text)
                 list_of_urls_[i]['title'] = page_title
                 list_of_urls_[i]['number'] = podcast_number
 
