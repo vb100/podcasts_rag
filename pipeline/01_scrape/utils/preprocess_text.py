@@ -121,9 +121,13 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "we'll ": "we will ",
         "don't": "do not",
         "Don't": "Do not",
+        " ...": ".",
+        "(Laughs)": "",
         "there’ll": "there will",
         "There’ll": "There will",
         "He’s": "He is",
+        "You’d": "You would",
+        "you’d": "you would",
         "there’re": "there are",
         "who’s": "who is",
         "they’ve": "they have",
@@ -182,6 +186,8 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "it’s ": "it is ",
         "It’s": "It is",
         "I’ve": "I have",
+        "he’ll": "he will",
+        "He’ll": "He will",
         "that's ": 'that is ',
         "wasn't": "was not",
         "That’s": "That is",
@@ -190,17 +196,25 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "there‘s": "there is",
         "That's ": "That is ",
         "there's ": "there is ",
+        "they're": "they are",
+        "They're": "They are",
+        "hasn’t": "has not",
+        "Hasn’t": "Has not",
         "doesn't ": "does not",
         "you’re": "you are",
         "You’re": "You are",
         "--": "-",
         'Podcast Transcript': '',
-        '(background music plays)': ''
+        '(background music plays)': '',
+        " ] ": "] ",
+        " . ": ". ",
+        "...": "."
     }
 
     for this_key in phrases_to_remove.keys():
         paragraph_text: str = paragraph_text.replace(this_key, phrases_to_remove.get(this_key))
 
     paragraph_text: str = preprocess_sentence(sentence=paragraph_text.replace('  ', ' '))
+    paragraph_text: str = " ".join(paragraph_text.split())
 
     return paragraph_text

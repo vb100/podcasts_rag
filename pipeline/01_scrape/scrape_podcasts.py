@@ -138,13 +138,14 @@ class TextScrapper:
         """
         filename: str = f'{number.replace(" ", "_").lower()}_{title.lower().split(":")[-1].replace(" ", "_")}.json'
         filename: str = filename.replace('/', '_')
-        filename: str = filename.replace('__', '_')
         filename: str = filename.replace(',', '')
         filename: str = filename.replace('”', '')
         filename: str = filename.replace('%', '')
         filename: str = filename.replace('!', '')
         filename: str = filename.replace('"', '')
         filename: str = filename.replace('?', '')
+        filename: str = filename.replace('__', '_')
+        filename: str = filename.replace('www.', '')
 
         return filename
 
@@ -156,8 +157,9 @@ class TextScrapper:
         list_of_urls_ = list_of_urls
 
         with sync_playwright() as playwright:
-            for i, this_record in enumerate(list_of_urls):
-            #for i, this_record in enumerate(list_of_urls[109:]):
+             for i in range(0, len(list_of_urls)):
+            #for i in range(202, len(list_of_urls)):
+                this_record: dict = list_of_urls[i]
                 logger.info(f'{i+1}, {this_record["url"]}')
 
                 browser = playwright.chromium.launch(headless=True, slow_mo=1500)
@@ -171,6 +173,9 @@ class TextScrapper:
                     podcast_number: str = re.search(r'[\w]{3}-[\d+]*', this_record['url']).group()
                 elif 'podcast-' in this_record['url']:
                     page_title_: str = this_record['url'].split('podcast-')[-1]
+                    podcast_number: str = f'cus-{str(i+1).zfill(2)}'
+                elif '/podcast/' in this_record['url']:
+                    page_title_: str = this_record['url'].split('/')[-1].strip()
                     podcast_number: str = f'cus-{str(i+1).zfill(2)}'
                 
                 page_title: str = page_title_.split(f'{podcast_number}: ')[-1]
