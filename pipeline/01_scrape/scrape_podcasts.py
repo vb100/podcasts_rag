@@ -38,6 +38,10 @@ MAIN_URL: str = 'https://www.superdatascience.com'
 payload: dict = {
     'meteor_js_resource': 'true'
 }
+possible_text_tags: list = [
+    '.transcript-container',
+    '.block-animation'
+]
 
 class TextScrapper:
     """Run the scrapper by executing the following steps:
@@ -150,8 +154,8 @@ class TextScrapper:
         list_of_urls_ = list_of_urls
 
         with sync_playwright() as playwright:
-             for i in range(0, len(list_of_urls)):
-            #for i in range(202, len(list_of_urls)):
+            for i in range(0, len(list_of_urls)):
+            #for i in range(201, len(list_of_urls)):
                 this_record: dict = list_of_urls[i]
                 logger.info(f'{i+1}, {this_record["url"]}')
 
@@ -174,32 +178,42 @@ class TextScrapper:
                     podcast_number: str = f'cus-{str(i+1).zfill(4)}'
                 
                 page_title: str = page_title_.split(f'{podcast_number}: ')[-1]
-                html_text = self.page.inner_html('.transcript-container')
+
+                # Recognize the correct tag of HTML code where the actual podcast text is stored
+                text_found: bool = False
+                for this_text_tag in possible_text_tags:
+                    if self.page.query_selector(this_text_tag) is not None:
+                        html_text = self.page.inner_html(this_text_tag)
+                        text_found: bool = True
                 # browsing logic: end ---->
                 browser.close()
 
-                html_text_for_scrapping: BeautifulSoup = BeautifulSoup(html_text, 'html.parser')
-                l_text: list = []
-                if len(html_text_for_scrapping.find_all('p')) > 1:
-                    l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='p')
+                if text_found:
+                    html_text_for_scrapping: BeautifulSoup = BeautifulSoup(html_text, 'html.parser')
+                    l_text: list = []
+                    if len(html_text_for_scrapping.find_all('p')) > 1:
+                        l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='p')
 
-                elif len(html_text_for_scrapping.find_all('div')) > 0:
-                    l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
-                full_text: str = ' '.join(list(set(l_text)))
+                    elif len(html_text_for_scrapping.find_all('div')) > 0:
+                        l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
+                    full_text: str = ' '.join(list(set(l_text)))
 
-                list_of_urls_[i]['full_text'] = self._full_podcast_text_cleaning_heuristic(podcast_text=full_text)
-                list_of_urls_[i]['title'] = page_title
-                list_of_urls_[i]['number'] = podcast_number
+                    list_of_urls_[i]['full_text'] = self._full_podcast_text_cleaning_heuristic(podcast_text=full_text)
+                    list_of_urls_[i]['title'] = page_title
+                    list_of_urls_[i]['number'] = podcast_number
 
-                # Generate filename and save the actual record (article text with metadata)
-                filename: str = generate_scrapped_podcast_filename(
-                    title=list_of_urls_[i]["title"],
-                    number=list_of_urls_[i]["number"]
-                    )
-                self.save_data_to_json(
-                    data=list_of_urls_[i],
-                    filename=filename
-                    )
+                    # Generate filename and save the actual record (article text with metadata)
+                    filename: str = generate_scrapped_podcast_filename(
+                        title=list_of_urls_[i]["title"],
+                        number=list_of_urls_[i]["number"]
+                        )
+                    self.save_data_to_json(
+                        data=list_of_urls_[i],
+                        filename=filename
+                        )
+                
+                else:
+                    logger.info(f'Text not found for {this_record["url"]}')
 
         return list_of_urls_
 

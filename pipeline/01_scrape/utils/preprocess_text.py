@@ -131,6 +131,8 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "(Laughs)": "",
         "there’ll": "there will",
         "There’ll": "There will",
+        "Can't": "Can not",
+        "can't": "can not",
         "He’s": "He is",
         "You’d": "You would",
         "you’d": "you would",
@@ -219,7 +221,9 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         '(background music plays)': '',
         " ] ": "] ",
         " . ": ". ",
-        "...": "."
+        "...": ".",
+        "?." : "?",
+        "!." : "!"
     }
 
     for this_key in phrases_to_remove.keys():
@@ -235,9 +239,17 @@ def remove_timestamps(podcast_text: str) -> str:
     Remove found timestamps [HH:MM:SS] from the given podcast text and return
     cleaned version
     """
-    timestamps = re.findall(r'[[]\d[:]\d+[:]\d+[]]', podcast_text)
-    if len(timestamps) > 0:
-        for this_timestamp in timestamps:
-            podcast_text: str = podcast_text.replace(this_timestamp, '')
+    timestamp_patterns: dict = {
+        r'[[]\d[:]\d+[:]\d+[]]': '',  # [HH:MM:SS]
+        r'\s[[][\w+]*[ ]\b\d+[:]\d+[:]\d+[]]': '',  # [inaudible HH:MM:SS]
+        r'\s[(]\d+:\d+[)]': '. ',  # (13:44),
+        r'\s[[]\d+:\d+[]][A-Z]': '. ' # [33:28]Parameters
+    }
+
+    for this_timestamp_pattern in timestamp_patterns.keys():
+        timestamps = re.findall(this_timestamp_pattern, podcast_text)
+        if len(timestamps) > 0:
+            for this_timestamp in timestamps:
+                podcast_text: str = podcast_text.replace(this_timestamp, timestamp_patterns.get(this_timestamp_pattern))
 
     return podcast_text
