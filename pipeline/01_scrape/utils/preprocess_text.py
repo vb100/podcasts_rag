@@ -74,6 +74,18 @@ def preprocess_sentence(sentence: str) -> str:
             
     for key, value in d.items():
         sentence: str = sentence.replace(key, value)
+
+    # Handle case: go!Today
+    d: dict = {}
+    for this_token in sentence.split(' '):
+        if re.search(r'[a-zA-Z]+[!][a-zA-Z]+', this_token):
+            temp_seq: str = re.search(r'[a-zA-Z]+[!][a-zA-Z]+', this_token).group()
+            word_1, word_2 = temp_seq.split('!')
+            fixed_seq: str = f'{word_1}? {word_2}'
+            d[temp_seq] = fixed_seq
+            
+    for key, value in d.items():
+        sentence: str = sentence.replace(key, value)
             
     # Handle case: needed."Kirill:
     d: dict = {}
@@ -113,6 +125,7 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         '\t': ' ',
         '\n': ' ',
         '--':'-',
+        '\ufeff': ' ',
         "I'll ": 'I will ',
         "I’ll": "I will",
         "you're ": "you are ",
@@ -222,8 +235,10 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         " ] ": "] ",
         " . ": ". ",
         "...": ".",
+        "…": ".",
         "?." : "?",
-        "!." : "!"
+        "!." : "!",
+        "*": '',
     }
 
     for this_key in phrases_to_remove.keys():
@@ -242,7 +257,7 @@ def remove_timestamps(podcast_text: str) -> str:
     timestamp_patterns: dict = {
         r'[[]\d[:]\d+[:]\d+[]]': '',  # [HH:MM:SS]
         r'\s[[][\w+]*[ ]\b\d+[:]\d+[:]\d+[]]': '',  # [inaudible HH:MM:SS]
-        r'\s[(]\d+:\d+[)]': '. ',  # (13:44),
+        r'\s[(]\d+:\d+[)]': '. ',  # (13:44)
         r'\s[[]\d+:\d+[]][A-Z]': '. ' # [33:28]Parameters
     }
 
@@ -251,5 +266,22 @@ def remove_timestamps(podcast_text: str) -> str:
         if len(timestamps) > 0:
             for this_timestamp in timestamps:
                 podcast_text: str = podcast_text.replace(this_timestamp, timestamp_patterns.get(this_timestamp_pattern))
+
+    podcast_text: str = podcast_text.replace('  ', ' ')
+
+    return podcast_text
+
+def fix_urls_definitions(podcast_text: str) -> str:
+    """
+    Fix various cases of wrongly extracted URLs adresses within the given text
+    """
+
+    # Handle issue: Competitionswww.spreadsheetdetective.com
+    misformated_urls: list = re.findall(r'\w+[w]{3}[.]\w+.\w+', podcast_text)
+    if len(misformated_urls) > 0:
+        for this_case in misformated_urls:
+            correct_url: str = re.findall(r'[w]{3}[.]\w+.\w+', this_case)
+            print(this_case, correct_url[0])
+            podcast_text: str = podcast_text.replace(this_case, f'{this_case.split(correct_url[0])[0]} {correct_url[0]}')
 
     return podcast_text
