@@ -187,6 +187,7 @@ class TextScrapper:
                     if self.page.query_selector(this_text_tag) is not None:
                         html_text = self.page.inner_html(this_text_tag)
                         text_found: bool = True
+                        break
                 # browsing logic: end ---->
                 browser.close()
 

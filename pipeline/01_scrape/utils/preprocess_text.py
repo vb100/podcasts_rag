@@ -63,7 +63,7 @@ def preprocess_sentence(sentence: str) -> str:
     for key, value in d.items():
         sentence: str = sentence.replace(key, value)
             
-    # Handle case: while?Artem
+    # Handle case: while?Artem 
     d: dict = {}
     for this_token in sentence.split(' '):
         if re.search(r'[a-zA-Z]+[?][a-zA-Z]+', this_token):
@@ -87,7 +87,7 @@ def preprocess_sentence(sentence: str) -> str:
     for key, value in d.items():
         sentence: str = sentence.replace(key, value)
             
-    # Handle case: needed."Kirill:
+    # Handle case: needed."Kirill: 
     d: dict = {}
         
     for this_token in sentence.split(' '):
@@ -108,6 +108,19 @@ def preprocess_sentence(sentence: str) -> str:
             temp_seq: str = re.search(r'[\d+]{4}[.][\d+]', this_token).group()
             digit_1, digit_2 = temp_seq.split('.')
             fixed_seq: str = f'{digit_1}. {digit_2}'
+            d[temp_seq] = fixed_seq
+
+    for key, value in d.items():
+        sentence: str = sentence.replace(key, value)
+
+    # Handle case: podcast:Introducing
+    d: dict = {}
+
+    for this_token in sentence.split(' '):
+        if re.search(r'[a-zA-Z]+[:][a-zA-Z]+', this_token):
+            temp_seq: str = re.search(r'[a-zA-Z]+[:][a-zA-Z]+', this_token).group()
+            word_1, word_2 = temp_seq.split(':')
+            fixed_seq: str = f'{word_1}. {word_2}'
             d[temp_seq] = fixed_seq
 
     for key, value in d.items():
@@ -136,6 +149,8 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "we'll": "we will",
         "don't": "do not",
         "Don't": "Do not",
+        "hasn't": "has not",
+        "Hasn't": "Has not",
         "we've": "we have",
         "We've": "We have",
         "they’d": "they would",
@@ -170,11 +185,17 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "you’d": "you would",
         "didn’t": "did not",
         "Can’t": "Can not",
+        "shouldn't": "should not",
+        "Shouldn't": "Shouldn't",
         "What’s": "What is",
+        "hadn’t": "had not",
+        "Hadn’t": "Had not",
         "wouldn’t": "would not",
         "we’ve": "we have",
         "We’ve": "We have",
         "There’ll": "There will",
+        "weren’t": "were not",
+        "Weren’t": "Were not",
         "can’t": "can not",
         "we’re": "we are",
         "I’d": "I would",
@@ -224,11 +245,17 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "They're": "They are",
         "hasn’t": "has not",
         "Hasn’t": "Has not",
+        "it’d": "it would",
+        "It’d": "It would",
         "doesn't ": "does not",
         "you’re": "you are",
         "You’re": "You are",
         "there's": "there is",
         "There's": "There is",
+        "here’s": "here is",
+        "Here’s": "Here is",
+        "everything’s": "everything is",
+        "Everything’s": "Everything is",
         "--": "-",
         'Podcast Transcript': '',
         '(background music plays)': '',
@@ -239,6 +266,7 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "?." : "?",
         "!." : "!",
         "*": '',
+        '"': '',
     }
 
     for this_key in phrases_to_remove.keys():
@@ -258,7 +286,8 @@ def remove_timestamps(podcast_text: str) -> str:
         r'[[]\d[:]\d+[:]\d+[]]': '',  # [HH:MM:SS]
         r'\s[[][\w+]*[ ]\b\d+[:]\d+[:]\d+[]]': '',  # [inaudible HH:MM:SS]
         r'\s[(]\d+:\d+[)]': '. ',  # (13:44)
-        r'\s[[]\d+:\d+[]][A-Z]': '. ' # [33:28]Parameters
+        r'\s[[]\d+:\d+[]][A-Z]': '. ', # [33:28]Parameters
+        r'\s[[]\d+:\d+[]]': '', # [09:07]
     }
 
     for this_timestamp_pattern in timestamp_patterns.keys():
@@ -281,7 +310,13 @@ def fix_urls_definitions(podcast_text: str) -> str:
     if len(misformated_urls) > 0:
         for this_case in misformated_urls:
             correct_url: str = re.findall(r'[w]{3}[.]\w+.\w+', this_case)
-            print(this_case, correct_url[0])
             podcast_text: str = podcast_text.replace(this_case, f'{this_case.split(correct_url[0])[0]} {correct_url[0]}')
+
+    # Handle issue: http://www.intrinsicallydeep.comhttp://waitbutwhy.com
+    misformated_urls: list = re.findall(r'http://[w]{3}[.]\w+.\w+http://', podcast_text)
+    if len(misformated_urls) > 0:
+        for this_case in misformated_urls:
+            correct_urls: str = f"{this_case.split('http://')[1]} http//"   
+        podcast_text: str = podcast_text.replace(this_case, correct_urls)
 
     return podcast_text
