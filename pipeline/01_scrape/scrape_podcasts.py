@@ -207,7 +207,9 @@ class TextScrapper:
                     list_of_urls_[i]['title'] = page_title
                     list_of_urls_[i]['number'] = podcast_number
                     list_of_urls_[i]['n_words'] = len(full_text.split(' '))
-                    list_of_urls_[i]['length'] = len(full_text)
+                    list_of_urls_[i]['n_chars'] = len(full_text)
+                    list_of_urls_[i]['n_sentences'] = len(full_text.split('. '))
+                    list_of_urls_[i]['tokens_count'] = len(full_text) / 4  # 1 token = ~4 characters
 
                     # Generate filename and save the actual record (article text with metadata)
                     filename: str = generate_scrapped_podcast_filename(
