@@ -200,11 +200,14 @@ class TextScrapper:
                     elif len(html_text_for_scrapping.find_all('div')) > 0:
                         l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
                     full_text: str = ' '.join(list(set(l_text)))
+                    full_text: str = self._full_podcast_text_cleaning_heuristic(podcast_text=full_text)
 
                     
-                    list_of_urls_[i]['full_text'] = self._full_podcast_text_cleaning_heuristic(podcast_text=full_text)
+                    list_of_urls_[i]['full_text'] = full_text
                     list_of_urls_[i]['title'] = page_title
                     list_of_urls_[i]['number'] = podcast_number
+                    list_of_urls_[i]['n_words'] = len(full_text.split(' '))
+                    list_of_urls_[i]['length'] = len(full_text)
 
                     # Generate filename and save the actual record (article text with metadata)
                     filename: str = generate_scrapped_podcast_filename(

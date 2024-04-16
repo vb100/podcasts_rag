@@ -126,6 +126,16 @@ def preprocess_sentence(sentence: str) -> str:
     for key, value in d.items():
         sentence: str = sentence.replace(key, value)
 
+    # Handle case: 200,000
+    d: dict = {}
+    
+    for this_token in sentence.split(' '):
+        if re.search('\d+[,]\d+', this_token):
+            d[this_token] = ''.join(this_token.split(','))
+            
+    for key, value in d.items():
+        sentence: str = sentence.replace(key, value)
+
     return sentence
 
 def clean_paragprah_text(paragraph_text: str) -> str:
@@ -153,8 +163,11 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "Hasn't": "Has not",
         "we've": "we have",
         "We've": "We have",
+        "it’ll": "it will",
+        "It’ll": "It will",
         "they’d": "they would",
         "They’d": "They would",
+        "inaudible": "",
         " ...": ".",
         "(Laughs)": "",
         "there’ll": "there will",
@@ -166,6 +179,7 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "you’d": "you would",
         "there’re": "there are",
         "who’s": "who is",
+        "Who’s": "Who is",
         "they’ve": "they have",
         "They’ve": "They have",
         "You'll ": "You will ",
@@ -254,10 +268,18 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "There's": "There is",
         "here’s": "here is",
         "Here’s": "Here is",
+        "I'd": "I would",
+        "who’ve": "who have",
+        "Who’ve": "Who have",
+        "There’re": "There are",
+        "there’re": "there are",
         "everything’s": "everything is",
         "Everything’s": "Everything is",
+        "something’s": "something is",
+        "Something’s": "Something is",
         "--": "-",
         'Podcast Transcript': '',
+        'Linked In': 'LinkedIn',
         '(background music plays)': '',
         " ] ": "] ",
         " . ": ". ",
@@ -267,13 +289,15 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "!." : "!",
         "*": '',
         '"': '',
+        '":': ''
     }
+
 
     for this_key in phrases_to_remove.keys():
         paragraph_text: str = paragraph_text.replace(this_key, phrases_to_remove.get(this_key))
 
     paragraph_text: str = preprocess_sentence(sentence=paragraph_text.replace('  ', ' '))
-    paragraph_text: str = " ".join(paragraph_text.split())
+    paragraph_text: str = " ".join(paragraph_text.split()).strip()
 
     return paragraph_text
 
@@ -285,9 +309,12 @@ def remove_timestamps(podcast_text: str) -> str:
     timestamp_patterns: dict = {
         r'[[]\d[:]\d+[:]\d+[]]': '',  # [HH:MM:SS]
         r'\s[[][\w+]*[ ]\b\d+[:]\d+[:]\d+[]]': '',  # [inaudible HH:MM:SS]
-        r'\s[(]\d+:\d+[)]': '. ',  # (13:44)
+        r'[[][\w+]*\s[\d+]*[:][\d+]*[]]': '',  # [indecipherable 46:43]
+        r'\s[(]\d+:\d+[)]': '. ',  # \s(13:44)
         r'\s[[]\d+:\d+[]][A-Z]': '. ', # [33:28]Parameters
         r'\s[[]\d+:\d+[]]': '', # [09:07]
+        r'[(]\d+:\d+[)]': '',  # (13:44)
+        r'\d+:\d+:\d+': '', # 00:24:51
     }
 
     for this_timestamp_pattern in timestamp_patterns.keys():

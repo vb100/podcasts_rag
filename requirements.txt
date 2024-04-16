@@ -9,3 +9,4 @@ nltk==3.8.1
 tqdm
 bs4==0.0.1
 urllib3==1.26.6
+spacy
