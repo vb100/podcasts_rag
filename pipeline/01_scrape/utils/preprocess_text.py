@@ -152,6 +152,7 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "I'll ": 'I will ',
         "I’ll": "I will",
         "you're ": "you are ",
+        "You're": "You are",
         "they’re": "they are",
         "They’re": "They are",
         "we'll ": "we will ",
@@ -284,6 +285,8 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "Haven't": "Have not",
         "There’re": "There are",
         "there’re": "there are",
+        "couldn't": "could not",
+        "Couldn't": "Could not",
         "doesn't": "does not",
         "Doesn't": "Does not",
         "wouldn't": "would not",
@@ -335,6 +338,7 @@ def remove_timestamps(podcast_text: str) -> str:
         r'\s[[]\d+:\d+[]]': '', # [09:07]
         r'[(]\d+:\d+[)]': '',  # (13:44)
         r'\d+:\d+:\d+': '', # 00:24:51
+        r'\d+:\d+': ''  # 18:32
     }
 
     for this_timestamp_pattern in timestamp_patterns.keys():

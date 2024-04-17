@@ -14,6 +14,22 @@ import json
 logging.Formatter.converter = time.gmtime
 logger = logging.getLogger(__name__)
 
+# System constansts
+MTH_DICT: dict = {
+    'Jan': '01',
+    'Feb': '02',
+    'Mar': '03',
+    'Apr': '04',
+    'May': '05',
+    'Jun': '06',
+    'Jul': '07',
+    'Aug': '08',
+    'Sep': '09',
+    'Oct': '10',
+    'Nov': '11',
+    'Dec': '12'
+}
+
 
 def prepare_page_for_scrapping(page_url: str) -> BeautifulSoup:
     """
@@ -55,11 +71,11 @@ def error_msg_load_page(url: str, max_retries: str) -> None:
     logger.error('-'*20)
 
 
-def generate_scrapped_podcast_filename(title: str, number: str) -> str:
+def generate_scrapped_podcast_filename(title: str, number: str, date: str) -> str:
     """
     Clean a given raw filename string and return generated version of that
     """
-    filename: str = f'{number.replace(" ", "_").lower()}_{title.lower().split(":")[-1].replace(" ", "_")}.json'
+    filename: str = f'{date}_{number.replace(" ", "_").lower()}_{title.lower().split(":")[-1].replace(" ", "_")}.json'
 
     rules_to_clean: dict = {
         " ": "_",
@@ -78,3 +94,12 @@ def generate_scrapped_podcast_filename(title: str, number: str) -> str:
         filename: str = filename.replace(this_key, rules_to_clean.get(this_key))
 
     return filename
+
+def parse_date(date_string: str) -> str:
+    """
+    Transform original date string (Saturday Sep 10, 2016) to format YYYYMMDD
+    """
+    date_string: str = date_string.replace(',', '')
+    date_elements: str = date_string.split(' ')[1:]
+    
+    return f'{date_elements[-1]}{MTH_DICT.get(date_elements[0])}{date_elements[1]}'

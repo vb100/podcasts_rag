@@ -15,6 +15,7 @@ from utils.utils import (
     save_to_json,
     error_msg_load_page,
     generate_scrapped_podcast_filename,
+    parse_date,
 )
 from utils.preprocess_text import (
     preprocess_sentence,
@@ -180,6 +181,12 @@ class TextScrapper:
                     podcast_number: str = f'cus-{str(i+1).zfill(4)}'
                 
                 page_title: str = page_title_.split(f'{podcast_number}: ')[-1]
+                podcast_date: str = parse_date(
+                    date_string=BeautifulSoup(
+                        self.page.inner_html('.information'), 'html.parser'
+                        ) \
+                            .find_all('p')[-1].text) \
+                            .strip()
 
                 # Recognize the correct tag of HTML code where the actual podcast text is stored
                 text_found: bool = False
@@ -205,16 +212,19 @@ class TextScrapper:
                     
                     list_of_urls_[i]['full_text'] = full_text
                     list_of_urls_[i]['title'] = page_title
+                    list_of_urls_[i]['date'] = podcast_date
                     list_of_urls_[i]['number'] = podcast_number
                     list_of_urls_[i]['n_words'] = len(full_text.split(' '))
                     list_of_urls_[i]['n_chars'] = len(full_text)
                     list_of_urls_[i]['n_sentences'] = len(full_text.split('. '))
                     list_of_urls_[i]['tokens_count'] = len(full_text) / 4  # 1 token = ~4 characters
+                    # TODO: add timestamp of each podcast
 
                     # Generate filename and save the actual record (article text with metadata)
                     filename: str = generate_scrapped_podcast_filename(
                         title=list_of_urls_[i]["title"],
-                        number=list_of_urls_[i]["number"]
+                        number=list_of_urls_[i]["number"],
+                        date=podcast_date
                         )
                     self.save_data_to_json(
                         data=list_of_urls_[i],
