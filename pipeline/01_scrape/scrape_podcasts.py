@@ -158,7 +158,6 @@ class TextScrapper:
 
         with sync_playwright() as playwright:
             for i in range(0, len(list_of_urls)):
-            #for i in range(201, len(list_of_urls)):
                 this_record: dict = list_of_urls[i]
                 logger.info(f'{i+1}, {this_record["url"]}')
 
@@ -206,9 +205,8 @@ class TextScrapper:
 
                     elif len(html_text_for_scrapping.find_all('div')) > 0:
                         l_text: list = self.handle_parapgraphs(all_text_sections=html_text_for_scrapping, tag='div')
-                    full_text: str = ' '.join(list(set(l_text)))
+                    full_text: str = ' '.join(list(l_text))
                     full_text: str = self._full_podcast_text_cleaning_heuristic(podcast_text=full_text)
-
                     
                     list_of_urls_[i]['full_text'] = full_text
                     list_of_urls_[i]['title'] = page_title
