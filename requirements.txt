@@ -1,6 +1,7 @@
 python-dotenv==0.20.0
 wheel-0.43.0
 setuptools-69.5.1
+sentence-transformers==2.7.0
 numpy
 pandas==1.5.3
 regex
@@ -12,3 +13,6 @@ tqdm
 bs4==0.0.1
 urllib3==1.26.6
 spacy==3.7.4
+chromadb==0.4.24
+langchain==0.1.16
+chardet==5.2.0

@@ -103,3 +103,12 @@ def parse_date(date_string: str) -> str:
     date_elements: str = date_string.split(' ')[1:]
     
     return f'{date_elements[-1]}{MTH_DICT.get(date_elements[0])}{date_elements[1]}'
+
+def split_by_doubled_text(podcast_text: str) -> str:
+    """
+    Split the given podcast text by the last sentence
+    """
+    last_sentence: str = podcast_text.split('. ')[-1]
+    podcast_text: str = podcast_text.split(last_sentence)[0] + last_sentence
+
+    return podcast_text

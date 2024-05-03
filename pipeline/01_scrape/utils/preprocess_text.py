@@ -145,6 +145,7 @@ def clean_paragprah_text(paragraph_text: str) -> str:
 
     paragraph_text: str = paragraph_text.strip()
     phrases_to_remove: dict = {
+        'Linked In': 'Linkedin',
         '\t': ' ',
         '\n': ' ',
         '--':'-',
@@ -258,6 +259,7 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "That’s": "That is",
         "that’s": "that is",
         "they'll": "they will",
+        "They'll": "They will",
         "there‘s": "there is",
         "That's ": "That is ",
         "he's": "he is",
@@ -293,16 +295,25 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         "Wouldn't": "Would not",
         "could't": "could not",
         "Could't": "Could not",
+        "weren't": "were not",
+        "Weren't": "Were not",
+        "who's": "who is",
+        "Who's": "Who is",
+        "they've": "they have",
+        "They've": "They have",
         "everything’s": "everything is",
         "Everything’s": "Everything is",
         "something’s": "something is",
         "Something’s": "Something is",
+        "HireVue": "Hirevue",
+        "Py Torch": "PyTorch",
         "--": "-",
         'Podcast Transcript': '',
-        'Linked In': 'LinkedIn',
+        "Linked In’s": "Linkedin’s",
         '(background music plays)': '',
-        "You Tube": "YouTube",
-        "Linked In’s": "LinkedIn’s",
+        "You Tube": "Youtube",
+        "Show allarrow_downward": "",
+        "Until then, happy analyzing.": '',
         " ] ": "] ",
         " . ": ". ",
         "...": ".",
@@ -314,7 +325,6 @@ def clean_paragprah_text(paragraph_text: str) -> str:
         '":': '',
         "()": "",
     }
-
 
     for this_key in phrases_to_remove.keys():
         paragraph_text: str = paragraph_text.replace(this_key, phrases_to_remove.get(this_key))
