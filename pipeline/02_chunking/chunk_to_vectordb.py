@@ -134,7 +134,7 @@ def main():
         embedding_function=job.connect_to_hugging_face(),
     )
 
-    for this_collection in tqdm(text_with_data[:15]):
+    for this_collection in tqdm(text_with_data):
         full_text: str = this_collection["full_text"]
 
         # 1. Split text to sentences
@@ -175,7 +175,7 @@ def main():
 if __name__ == "__main__":
     import argparse
 
-    arg_parser = argparse.ArgumentParser(description="Podcast texts scrapper")
+    arg_parser = argparse.ArgumentParser(description="Podcast texts chunking")
     arg_parser.add_argument("--run", default=False, action="store_true")
     args = arg_parser.parse_args()
 
