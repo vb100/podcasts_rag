@@ -53,7 +53,10 @@ def preprocess_sentence(sentence: str) -> str:
     """
     Pre-process the given sentence before pushing it to vector databse
     """
-    replacements: dict = {".:": ". "}
+    replacements: dict = {
+        ".:": ". ",
+        "Py Torch": "PyTorch",
+    }
 
     for this_key in replacements.keys():
         sentence: str = sentence.replace(this_key, replacements.get(this_key))
@@ -61,11 +64,10 @@ def preprocess_sentence(sentence: str) -> str:
     return sentence
 
 
-def valid_sentence(sentence: str) -> bool:
+def valid_sentence(sentence: str, allowed_sentence_lenght: int) -> bool:
     """
     Check if the given sentence is valid to push it to vector database
     """
-    L: int = 30
 
     CONDS = [
         "Data Science Coach and Lifestyle Entrepreneur".lower() not in sentence.lower(),
@@ -75,7 +77,7 @@ def valid_sentence(sentence: str) -> bool:
         "This is Five-Minute Friday on".lower() not in sentence.lower(),
         "I was really excited".lower() not in sentence.lower(),
         "see you back here next time".lower() not in sentence.lower(),
-        len(sentence) > L,
+        len(sentence) > allowed_sentence_lenght,
     ]
 
     if all(CONDS):
@@ -84,16 +86,14 @@ def valid_sentence(sentence: str) -> bool:
         return False
 
 
-def split_text(text):
+def split_text(text: str, chunk_overlap: int, chunk_size: int) -> list:
     """
     Splitting given text into smaller chunks
     """
-    tokens = text.split()
-    splits = []
-    temp_list = []
-    cursor = 0
-    chunk_overlap = 10
-    chunk_size = 100
+    tokens: list = text.split()
+    splits: list = []
+    temp_list: list = []
+    cursor: int = 0
 
     while cursor < len(tokens):
         temp_list.append(tokens[cursor])

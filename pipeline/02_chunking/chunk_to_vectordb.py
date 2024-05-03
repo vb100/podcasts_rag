@@ -4,8 +4,9 @@ save them into new vector database (ChromaDB)
 """
 
 # Import packages and modules
+import os
 import logging
-import json
+import configparser
 from tqdm.auto import tqdm
 from dotenv import load_dotenv
 from spacy.lang.en import English
@@ -25,6 +26,16 @@ from utils import (
 
 # Load config and environment
 load_dotenv()
+conf_dir = os.path.abspath(
+    os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        os.environ.get("CONFIG_PATH"),
+    )
+)
+
+conf = configparser.ConfigParser()
+conf.read(os.path.join(conf_dir, "config.conf"))
 
 # Initialize logger
 logging.basicConfig(
@@ -33,14 +44,13 @@ logging.basicConfig(
 template_name = "Podcast chunking and saving pipeline"
 logger = logging.getLogger(template_name)
 
-# System constants
+# System constants (from .env and config files)
 DATABASE_NAME: str = f"db_{get_current_date_and_time()}"
-CHUNKS_OVERLAP_RATIO: int = (
-    10  # How many common characters allowed in between two sequential chunks
-)
-MIN_TOKEN_LENGHT: int = 35  # Minimum allowed number of tokens per sentence
-L: int = 35  # Length of sentence allowed
-NUM_SENTENCES_CHUNK_SIZE: int = 12  # split size to turn groups of sentences into chunks
+CHUNKS_OVERLAP_RATIO: int = int(conf["llm_parameters"]["CHUNKS_OVERLAP_RATIO"])
+CHUNK_SIZE: int = int(conf["llm_parameters"]["CHUNK_SIZE"])  # Tokens
+L: int = int(conf["llm_parameters"]["LENGHT_OF_SENTENCE"])  # Length of sentence allowed
+EMBEDDING_FUNCTION: str = conf["llm_parameters"]["EMBEDDING_FUNCTION"]
+EMBEDDING_MODEL: str = conf["llm_parameters"]["EMBEDDING_MODEL"]
 
 
 class ChunkingAndSaving:
@@ -53,13 +63,15 @@ class ChunkingAndSaving:
         self,
         db_name: str = DATABASE_NAME,
         chunks_overlap: int = CHUNKS_OVERLAP_RATIO,
-        min_token_lenght: int = MIN_TOKEN_LENGHT,
-        num_sentence_chunk_size: int = NUM_SENTENCES_CHUNK_SIZE,
+        chunk_size: int = CHUNK_SIZE,
+        embedding_function: str = EMBEDDING_FUNCTION,
+        embedding_model: str = EMBEDDING_MODEL,
     ):
         self.vectordb_name: str = db_name
-        self.chunks_overlap: str = chunks_overlap
-        self.min_token_lenght: int = min_token_lenght
-        self.num_sentence_chunk_size: int = num_sentence_chunk_size
+        self.chunks_overlap: int = chunks_overlap
+        self.chunk_size: int = chunk_size
+        self.embedding_function: str = embedding_function
+        self.embedding_model: str = embedding_model
 
         # Add sentencizer pipeline
         self.nlp = English()
@@ -95,24 +107,13 @@ class ChunkingAndSaving:
 
         huggingface_ef = embedding_functions.HuggingFaceEmbeddingFunction(
             api_key=loaded_info.get("api_token"),
-            model_name=loaded_info.get("embedding_function"),
+            model_name=self.embedding_function,
         )
         # Use these credentials on demand if needed
 
-        embeddings = SentenceTransformerEmbeddings(
-            model_name=loaded_info.get("embedding_model")
-        )
+        embeddings = SentenceTransformerEmbeddings(model_name=self.embedding_model)
 
         return embeddings
-
-    def split_list(self, input_list: list[str], slice_size: int) -> list[list[str]]:
-        """
-        Split list of sentences into chunks by slice size
-        """
-        return [
-            input_list[i : i + slice_size]
-            for i in range(0, len(input_list), slice_size)
-        ]
 
 
 def main():
@@ -127,15 +128,13 @@ def main():
         path="../01_scrape/output", extension=".json"
     )
 
-    # Load ensembling function from Hugging Face
-    huggingface_ef = job.connect_to_hugging_face()
-
     # Initialize VectorDB
     vector_db = Chroma(
-        persist_directory="./" + DATABASE_NAME, embedding_function=huggingface_ef
+        persist_directory="./" + DATABASE_NAME,
+        embedding_function=job.connect_to_hugging_face(),
     )
 
-    for this_collection in tqdm(text_with_data[:5]):
+    for this_collection in tqdm(text_with_data[:15]):
         full_text: str = this_collection["full_text"]
 
         # 1. Split text to sentences
@@ -144,7 +143,7 @@ def main():
         full_text_l: list = []
         for this_sentence in sentences:
             sentence: str = preprocess_sentence(sentence=str(this_sentence))
-            if valid_sentence(sentence=sentence):
+            if valid_sentence(sentence=sentence, allowed_sentence_lenght=L):
                 full_text_l.append(sentence)
             full_text_joined: str = " ".join(full_text_l)
 
@@ -153,11 +152,15 @@ def main():
             collection_name = collection_name[: len(collection_name) - 1]
         collection_name: str = collection_name.replace("-", "_")
 
-        chunks: list = split_text(text=full_text_joined)
+        chunks: list = split_text(
+            text=full_text_joined,
+            chunk_overlap=job.chunks_overlap,
+            chunk_size=job.chunk_size,
+        )
         metadata: list = [{"source": this_collection["title"]} for name in chunks]
 
         logger.info(
-            f"[INFO] Initializing VectorDB and pushing the document: {collection_name}"
+            f"Initializing VectorDB and pushing the document: {collection_name}"
         )
 
         vector_db.add_texts(
