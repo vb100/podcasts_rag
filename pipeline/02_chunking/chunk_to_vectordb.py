@@ -129,8 +129,20 @@ def main():
     )
 
     # Initialize VectorDB
+    logger.info(f"Initializing VectorDB")
+    db_path: str = os.path.join(
+        os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "vector_dbs",
+            )
+        ),
+        DATABASE_NAME,
+    )
+
     vector_db = Chroma(
-        persist_directory="./" + DATABASE_NAME,
+        persist_directory=db_path,
         embedding_function=job.connect_to_hugging_face(),
     )
 
@@ -159,9 +171,7 @@ def main():
         )
         metadata: list = [{"source": this_collection["title"]} for name in chunks]
 
-        logger.info(
-            f"Initializing VectorDB and pushing the document: {collection_name}"
-        )
+        logger.info(f"Pushing the document to the vector database: {collection_name}")
 
         vector_db.add_texts(
             texts=chunks, metadatas=metadata, collection_name=collection_name

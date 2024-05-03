@@ -59,14 +59,23 @@ class RetrieveFromDB:
         We need to take the latest generated vector database from <02> part and use
         this database to retrieve scores
         """
-        pass
+
+        return dir_path
 
     def run_retrieval(self) -> dict:
         """
         Trigger the retrieval job and return the most corresponsive chunk(s)
         """
 
-        pass
+        latest_db: str = self.get_latest_vector_db_path(
+            dir_path=os.path.abspath(
+                os.path.join(
+                    os.path.dirname(__file__),
+                    "..",
+                    "02_chunking",
+                )
+            )
+        )
 
 
 def main() -> None:
