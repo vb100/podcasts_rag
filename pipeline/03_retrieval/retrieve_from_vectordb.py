@@ -80,6 +80,15 @@ class RetrieveFromDB:
 
         return latest_directory
 
+    def get_embedding_model(self):
+        """
+        Load embedding model used to embedd scrapped text to numerical expression
+        """
+        embedding = SentenceTransformerEmbeddings(model_name=self.embedding_model)
+        logger.info("Embedding model is loaded.")
+
+        return embedding
+
     def run_retrieval(self) -> dict:
         """
         Trigger the retrieval job and return the most corresponsive chunk(s)
@@ -96,6 +105,11 @@ class RetrieveFromDB:
         )
 
         # Initialize new connection to the latest vector database
+        embeddings = self.get_embedding_model()
+        db_connection = Chroma(
+            persist_directory="./chroma_db_main", embedding_function=embeddings
+        )
+        logger.info("Connection to existing vector database is initialized.")
 
 
 def main() -> None:
