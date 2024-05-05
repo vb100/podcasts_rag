@@ -5,9 +5,12 @@ pre-generated vector database (ChromaDB)
 
 # Import modules and packages
 import os
+import time
 import logging
+import datetime
 import configparser
 import chromadb
+from glob import glob
 from dotenv import load_dotenv
 import chromadb.utils.embedding_functions as embedding_functions
 from langchain_community.vectorstores import Chroma
@@ -59,8 +62,23 @@ class RetrieveFromDB:
         We need to take the latest generated vector database from <02> part and use
         this database to retrieve scores
         """
+        directory_list_dict = {}
+        directories = glob(f"{dir_path}/*")
+        date_list: list = []
+        for d in directories:
+            latest_file_key = max(glob(f"{d}/*"), key=os.path.getctime)
+            file_arr_time = time.strftime(
+                "%m/%d/%Y", time.gmtime(os.path.getmtime(latest_file_key))
+            )
+            date_val = datetime.datetime.strptime(file_arr_time, "%m/%d/%Y")
+            directory_list_dict[date_val] = latest_file_key
+            date_list.append(date_val)
 
-        return dir_path
+        max_date = max(date_list)
+        latest_file = directory_list_dict[max_date]
+        latest_directory = latest_file.rsplit("/", 1)[0]
+
+        return latest_directory
 
     def run_retrieval(self) -> dict:
         """
@@ -72,10 +90,12 @@ class RetrieveFromDB:
                 os.path.join(
                     os.path.dirname(__file__),
                     "..",
-                    "02_chunking",
+                    "vector_dbs",
                 )
             )
         )
+
+        # Initialize new connection to the latest vector database
 
 
 def main() -> None:
