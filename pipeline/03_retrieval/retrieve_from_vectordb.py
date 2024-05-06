@@ -89,27 +89,61 @@ class RetrieveFromDB:
 
         return embedding
 
+    def get_top_results_and_scores(
+        self,
+        query: str,
+        database: Chroma,
+        where: str,
+        n_resurces_to_return: int = 5,
+    ) -> list:
+        """
+        Finds relevant passages given a query and prints them out with their scores
+        """
+        similar_docs = database.similarity_search_with_relevance_scores(
+            query=query, k=n_resurces_to_return, filter={"source": where}
+        )
+
+        l_data: list = []
+        for i, this_response in enumerate(similar_docs):
+
+            d: dict = {
+                "response": this_response[0].dict()["page_content"],
+                "score": this_response[1],
+                "source": this_response[0].dict()["metadata"]["source"],
+            }
+            l_data.append(dict(d))
+
+        return l_data
+
     def run_retrieval(self) -> dict:
         """
         Trigger the retrieval job and return the most corresponsive chunk(s)
         """
 
-        latest_db: str = self.get_latest_vector_db_path(
-            dir_path=os.path.abspath(
-                os.path.join(
-                    os.path.dirname(__file__),
-                    "..",
-                    "vector_dbs",
-                )
+        db_dir: str = os.path.abspath(
+            os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "vector_dbs",
             )
         )
+        latest_db: str = self.get_latest_vector_db_path(dir_path=db_dir)
 
         # Initialize new connection to the latest vector database
         embeddings = self.get_embedding_model()
         db_connection = Chroma(
-            persist_directory="./chroma_db_main", embedding_function=embeddings
+            persist_directory=os.path.join(db_dir, latest_db),
+            embedding_function=embeddings,
         )
         logger.info("Connection to existing vector database is initialized.")
+
+        l_data: list = self.get_top_results_and_scores(
+            query="cybersecurity",
+            database=db_connection,
+            where="daily-habit-number-six-write-morning-pages",
+            n_resurces_to_return=5,
+        )
+        print(l_data)
 
 
 def main() -> None:
